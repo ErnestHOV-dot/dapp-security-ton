@@ -1,0 +1,9 @@
+{
+  "projects": [
+    {
+      "name": "vulnerable",
+      "path": "./test.tact",
+      "output": "./build"
+    }
+  ]
+}

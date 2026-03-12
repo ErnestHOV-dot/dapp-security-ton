@@ -1,0 +1,30 @@
+{
+  "name": "dapp-security-ton",
+  "version": "1.0.0",
+  "description": "TON DApp security toolkit",
+  "main": "dist/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "analyze": "ts-node src/index.ts",
+    "deploy": "ts-node scripts/deploy.ts",
+    "hack": "ts-node scripts/hack.ts",
+    "tact:build": "tact"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tact-lang/compiler": "^1.6.13",
+    "@ton/core": "^0.60.1",
+    "@ton/crypto": "^3.3.0",
+    "@ton/ton": "^13.9.0",
+    "dotenv": "^16.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
