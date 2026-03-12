@@ -2,7 +2,7 @@
   "projects": [
     {
       "name": "vulnerable",
-      "path": "./test.tact",
+      "path": "./contracts/test.tact",
       "output": "./build"
     }
   ]
