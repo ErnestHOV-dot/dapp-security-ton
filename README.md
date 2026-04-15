@@ -1,221 +1,101 @@
 # dapp-security-ton
 
-Прототип инструментального комплекса для анализа защищенности DApps в сети TON с фокусом на **статический анализ Tact-смарт-контрактов**.
+CLI toolkit for static analysis and gas profiling of TON Tact smart contracts.
 
----
+## What It Does
 
-## 📦 Технологический стек
+The project currently provides two user-facing capabilities:
 
-- `TypeScript`
-- `Tact`
-- `@tact-lang/compiler`
-- `TON SDK`
-- `ts-node`
+- `static analysis` for heuristic security checks on Tact source files
+- `gas profiling` in `@ton/sandbox` driven by explicit JSON scenarios
 
----
+The gas profiler is scenario-based by design. It does not guess contract behavior automatically; the user defines the calls to execute and the tool produces a structured JSON report plus a short console summary.
 
-## 🎯 Назначение проекта
-
-Проект предназначен для выявления типовых уязвимостей и архитектурных рисков в Tact-контрактах на этапе статического анализа.
-
-На текущем этапе реализован модуль анализатора, который:
-- парсит Tact-контракт в AST;
-- применяет набор эвристических правил;
-- выводит диагностические сообщения с severity, evidence и рекомендациями.
-
----
-
-## 📁 Актуальная структура проекта
-
-```text
-src/
-  index.ts          # точка входа анализатора
-  linter.ts         # запуск парсинга, выполнение правил, вывод результатов
-  types.ts          # доменные типы анализатора
-  utils.ts          # общие AST и CLI-утилиты
-  rules/            # набор отдельных правил анализа
-scripts/            # служебные deploy/hack-скрипты
-contracts/          # Tact-контракты для анализа
-build/              # артефакты сборки
-README.md
-package.json
-```
-
-### Назначение основных директорий
-
-- `src/` — исходный код статического анализатора;
-- `src/rules/` — отдельные проверки безопасности и качества;
-- `scripts/` — вспомогательные сценарии деплоя и взаимодействия;
-- `contracts/` — тестовые и демонстрационные Tact-контракты;
-- `build/` — выходные артефакты компиляции.
-
----
-
-## 🚀 Запуск проекта
-
-### Установка зависимостей
+## Quick Start
 
 ```bash
 npm install
-```
-
-### Сборка TypeScript-проекта
-
-```bash
+npm run tact:build
 npm run build
 ```
 
-### Запуск анализатора
+Run static analysis:
 
 ```bash
-npm run analyze
+npm run analyze -- ./contracts/GasTestContract.tact
 ```
 
-### Полная быстрая проверка
+Run gas profiling:
 
 ```bash
-npm run build && npm run analyze
+npm run gas:profile -- \
+  --contract ./contracts/GasTestContract.tact \
+  --scenarios ./examples/gas-profile/basic.scenarios.json
 ```
 
-> По умолчанию анализируется файл, указанный в `src/index.ts` в константе `FILENAME`.
+Run gas profiling through the main CLI:
 
----
+```bash
+npm run analyze -- \
+  --gas-profile \
+  --contract ./contracts/GasTestContract.tact \
+  --scenarios ./examples/gas-profile/basic.scenarios.json
+```
 
-## ⚙️ Доступные npm scripts
+## CLI Commands
 
-| Скрипт | Назначение |
+| Command | Purpose |
 |---|---|
-| `npm run build` | компиляция TypeScript через `tsc` |
-| `npm run dev` | запуск анализатора через `ts-node` |
-| `npm run analyze` | запуск статического анализа |
-| `npm run deploy` | запуск deploy-скрипта |
-| `npm run hack` | запуск сценария взаимодействия / тестового хака |
-| `npm run tact:build` | сборка Tact-контрактов |
+| `npm run analyze -- <contract>` | Run static analysis on a Tact file |
+| `npm run gas:profile -- ...` | Run gas profiling scenarios |
+| `npm run tact:build` | Build Tact artifacts and wrappers |
+| `npm run build` | Compile the TypeScript project |
+| `npm run test` | Run tests |
+| `npm run clean` | Remove generated `dist`, `build`, and `reports` directories |
 
----
+## Gas Profiling Inputs
 
-## 🛡️ Правила статического анализатора
+Supported CLI flags:
 
-Статический анализатор организован по модульному принципу: каждое правило вынесено в отдельный файл внутри `src/rules/`.
+- `--contract <path>`
+- `--scenarios <path>`
+- `--build <path>`
+- `--wrapper <path>`
+- `--output <path>`
+- `--format <json|pretty>`
 
-### 1. `todo-comment`
-**Назначение:** поиск комментариев `TODO` и `FIXME`.
+Example scenario files:
 
-**Что выявляет:**
-- незавершённую функциональность;
-- временные заглушки;
-- потенциально отложенные проверки безопасности.
+- [examples/gas-profile/basic.scenarios.json](/Users/e.salakhov/Desktop/static/dapp-security-ton/examples/gas-profile/basic.scenarios.json)
+- [examples/gas-profile/typed.scenarios.json](/Users/e.salakhov/Desktop/static/dapp-security-ton/examples/gas-profile/typed.scenarios.json)
 
-**Практический смысл:** такие комментарии часто указывают на участки, которые не были доведены до production-уровня.
+Detailed profiler documentation: [docs/gas-profiler.md](/Users/e.salakhov/Desktop/static/dapp-security-ton/docs/gas-profiler.md)
 
-### 2. `empty-function`
-**Назначение:** поиск пустых исполняемых блоков (`receive`, `init`, `fun`).
+## Project Layout
 
-**Что выявляет:**
-- неиспользуемые обработчики;
-- недописанную бизнес-логику;
-- избыточные элементы контракта.
+```text
+src/
+  index.ts
+  cli.ts
+  linter.ts
+  gas_profiler/
+  rules/
+scripts/
+  run-gas-profiler.ts
+contracts/
+  GasTestContract.tact
+examples/
+  gas-profile/
+docs/
+tests/
+```
 
-**Практический смысл:** пустые функции не дают полезного поведения, но усложняют сопровождение и могут указывать на логические ошибки проектирования.
+## Notes
 
-### 3. `external-replay-protection`
-**Назначение:** поиск внешних обработчиков без защиты от повторного воспроизведения сообщения.
-
-**Что выявляет:** отсутствие признаков replay-защиты, таких как:
-- `seqno`;
-- `msg_seqno`;
-- `timestamp`;
-- `now`.
-
-**Практический смысл:** без replay-защиты одна и та же внешняя операция может быть выполнена повторно, что критично для финансовых сценариев.
-
-### 4. `access-control`
-**Назначение:** поиск обработчиков без явного контроля доступа.
-
-**Что выявляет:** отсутствие сочетаний:
-- `require(...)` или `nativeThrow`;
-- проверок `sender()` / `owner`.
-
-**Практический смысл:** правило помогает находить участки, где чувствительная логика может быть вызвана неавторизованным отправителем.
-
-### 5. `loop-usage`
-**Назначение:** поиск потенциально опасных циклов.
-
-**Что выявляет:**
-- `while`;
-- `until`;
-- `repeat`.
-
-**Практический смысл:** неограниченные циклы в TON могут приводить к `Out-of-Gas`, отказу в обслуживании и нестабильному поведению контракта.
-
-### 6. `dump-call`
-**Назначение:** поиск оставленных отладочных вызовов `dump()`.
-
-**Что выявляет:** отладочный код, оставшийся в контракте после этапа разработки.
-
-**Практический смысл:** такие вызовы не должны оставаться в production-коде и могут свидетельствовать о незавершённой подготовке к деплою.
-
-### 7. `send-mode`
-**Назначение:** проверка корректности использования `send()`.
-
-**Что выявляет:** отсутствие явного `mode` или признаков безопасного режима отправки:
-- `mode`;
-- `SendRemainingValue`;
-- `128`.
-
-**Практический смысл:** режим отправки в TON влияет на обработку ошибок, возврат средств и общее поведение транзакции.
-
-### 8. `potential-deadlock`
-**Назначение:** эвристическое выявление межконтрактных сценариев с риском взаимной блокировки.
-
-**Что выявляет:**
-- условное ожидание подтверждений;
-- использование `status`, `confirm`, `waiting`, `pending`;
-- повторные `send()` в логике ожидания.
-
-**Практический смысл:** помогает находить сценарии, в которых несколько контрактов циклически ожидают подтверждения друг от друга и не могут завершить выполнение.
-
-### 9. `bounce-handling`
-**Назначение:** анализ обработки bounced-сообщений.
-
-**Что выявляет:**
-- bounce-чувствительные `send()`-вызовы;
-- отсутствие `bounced(...)`-обработчика;
-- недостаточное покрытие сценариев отката состояния.
-
-**Практический смысл:** если сообщение не доставлено и возвращается обратно, контракт должен корректно обработать такой случай и восстановить состояние при необходимости.
-
-### 10. `async-race`
-**Назначение:** поиск признаков асинхронной гонки состояний.
-
-**Что выявляет:**
-- fan-out отправку нескольких сообщений;
-- разные арифметические операции над одним и тем же `self.<field>`;
-- зависимость результата от порядка прихода ответов.
-
-**Практический смысл:** в TON порядок доставки асинхронных ответов не гарантирован, поэтому итоговое состояние контракта может зависеть от последовательности обработки сообщений.
-
----
-
-## 📊 Уровни серьёзности
-
-Анализатор использует несколько уровней серьёзности:
-
-- `CRITICAL` — высоковероятная или опасная уязвимость;
-- `HIGH` — значимый архитектурный риск;
-- `MEDIUM` — потенциальная проблема безопасности или корректности;
-- `LOW` — предупреждение о качестве кода;
-- `INFO` — справочное сообщение.
-
----
-
-## 🧪 Текущее состояние
-
-На текущем этапе проект поддерживает:
-- модульную архитектуру статического анализатора;
-- запуск из CLI и через npm scripts;
-- анализ Tact-контрактов на основе AST;
-- расширение набора правил без изменения точки входа.
+- The default demo contract is `contracts/GasTestContract.tact`.
+- Generated artifacts are written to `build/`.
+- Reports are written to `reports/` unless `--output` is provided.
+- The current profiler version supports `deploy`, `getter`, `receive-empty`, `receive-text`, and wrapper-backed `receive-typed`.
 
 ---
 

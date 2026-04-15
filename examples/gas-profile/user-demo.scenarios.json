@@ -1,0 +1,46 @@
+{
+  "contractName": "UserDemoContract",
+  "description": "User-style example scenarios for UserDemoContract",
+  "defaults": {
+    "value": "10000000",
+    "senderName": "deployer"
+  },
+  "scenarios": [
+    {
+      "name": "deploy",
+      "kind": "deploy"
+    },
+    {
+      "name": "empty receive",
+      "kind": "receive-empty",
+      "value": "10000000"
+    },
+    {
+      "name": "deposit text",
+      "kind": "receive-text",
+      "text": "deposit",
+      "value": "50000000"
+    },
+    {
+      "name": "typed add points",
+      "kind": "receive-typed",
+      "typedMessage": {
+        "$$type": "AddPoints",
+        "amount": "5"
+      },
+      "value": "10000000"
+    },
+    {
+      "name": "get points",
+      "kind": "getter",
+      "methodName": "pointsValue",
+      "args": []
+    },
+    {
+      "name": "get deposited",
+      "kind": "getter",
+      "methodName": "depositedValue",
+      "args": []
+    }
+  ]
+}
