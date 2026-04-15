@@ -1,8 +1,13 @@
 {
   "projects": [
     {
-      "name": "vulnerable",
-      "path": "./contracts/test.tact",
+      "name": "gas-test",
+      "path": "./contracts/GasTestContract.tact",
+      "output": "./build"
+    },
+    {
+      "name": "user-demo",
+      "path": "./contracts/UserDemoContract.tact",
       "output": "./build"
     }
   ]
