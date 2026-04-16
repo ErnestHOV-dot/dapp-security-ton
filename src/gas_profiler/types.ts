@@ -1,5 +1,6 @@
 import type { Address, Cell, StateInit, TupleItem } from "@ton/core";
 import type { Blockchain, BlockchainTransaction, SandboxContract, TreasuryContract } from "@ton/sandbox";
+import type { Issue } from "../types";
 
 export type GasScenarioKind =
     | "deploy"
@@ -29,6 +30,8 @@ export interface GasScenarioFile {
     contractName?: string;
     description?: string;
     defaults?: GasScenarioDefaults;
+    initArgs?: unknown[];
+    namedSenders?: Record<string, string>;
     scenarios: GasScenario[];
 }
 
@@ -86,6 +89,12 @@ export interface GasProfileReport {
     generatedAt: string;
     description?: string;
     scenarios: GasScenarioResult[];
+    staticAnalysis?: {
+        findings: Issue[];
+        summary: {
+            totalFindings: number;
+        };
+    };
     overall: {
         totalScenarios: number;
         successfulScenarios: number;
@@ -122,6 +131,12 @@ export interface SerializedGasProfileReport {
     generatedAt: string;
     description?: string;
     scenarios: SerializedGasScenarioResult[];
+    staticAnalysis?: {
+        findings: Issue[];
+        summary: {
+            totalFindings: number;
+        };
+    };
     overall: {
         totalScenarios: number;
         successfulScenarios: number;
@@ -167,7 +182,7 @@ export interface WrapperContractInstance {
 }
 
 export interface WrapperContractClass {
-    fromInit?: () => Promise<WrapperContractInstance>;
+    fromInit?: (...args: unknown[]) => Promise<WrapperContractInstance>;
     fromAddress?: (address: Address) => WrapperContractInstance;
 }
 

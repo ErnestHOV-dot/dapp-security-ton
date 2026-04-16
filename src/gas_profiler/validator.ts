@@ -42,10 +42,23 @@ export function validateScenarioFile(raw: unknown, scenariosPath: string): GasSc
         throw new Error(`Поле 'defaults' в '${scenariosPath}' должно быть объектом.`);
     }
 
+    if (candidate.initArgs !== undefined && !Array.isArray(candidate.initArgs)) {
+        throw new Error(`Поле 'initArgs' в '${scenariosPath}' должно быть массивом.`);
+    }
+
+    if (
+        candidate.namedSenders !== undefined &&
+        (!candidate.namedSenders || typeof candidate.namedSenders !== "object" || Array.isArray(candidate.namedSenders))
+    ) {
+        throw new Error(`Поле 'namedSenders' в '${scenariosPath}' должно быть объектом.`);
+    }
+
     return {
         contractName: optionalString(candidate.contractName, "contractName", scenariosPath),
         description: optionalString(candidate.description, "description", scenariosPath),
         defaults: candidate.defaults as GasScenarioFile["defaults"],
+        initArgs: candidate.initArgs as unknown[] | undefined,
+        namedSenders: candidate.namedSenders as Record<string, string> | undefined,
         scenarios,
     };
 }

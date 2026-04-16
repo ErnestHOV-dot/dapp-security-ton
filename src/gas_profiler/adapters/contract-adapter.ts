@@ -1,4 +1,4 @@
-import { beginCell, Cell, type Message, type StateInit } from "@ton/core";
+import { Address, beginCell, Cell, type Message, type StateInit } from "@ton/core";
 import { Blockchain } from "@ton/sandbox";
 import type { BlockchainTransaction, SandboxContract, TreasuryContract } from "@ton/sandbox";
 import {
@@ -24,6 +24,7 @@ export class TactContractAdapter implements ContractAdapter {
 
     private readonly contractInstance: WrapperContractInstance;
     private readonly contractClass: WrapperContractClass;
+    private readonly senderAliases: Record<string, Address>;
 
     private constructor(
         private readonly input: ResolvedGasProfilerInput,
@@ -31,12 +32,14 @@ export class TactContractAdapter implements ContractAdapter {
         contractName: string,
         contractClass: WrapperContractClass,
         contractInstance: WrapperContractInstance,
+        senderAliases: Record<string, Address>,
     ) {
         this.contractName = contractName;
         this.contractClass = contractClass;
         this.contractInstance = contractInstance;
         this.address = contractInstance.address;
         this.init = contractInstance.init;
+        this.senderAliases = senderAliases;
     }
 
     static async create(input: ResolvedGasProfilerInput, blockchain: Blockchain): Promise<TactContractAdapter> {
@@ -53,8 +56,19 @@ export class TactContractAdapter implements ContractAdapter {
             );
         }
 
-        const contractInstance = await contractClass.fromInit();
-        return new TactContractAdapter(input, blockchain, contractName, contractClass, contractInstance);
+        const senderAliases = await createSenderAliases(blockchain, input.scenarioFile);
+        const initArgs = (input.scenarioFile.initArgs ?? []).map((entry) =>
+            normalizeProfilerValue(entry, senderAliases),
+        );
+        const contractInstance = await contractClass.fromInit(...initArgs);
+        return new TactContractAdapter(
+            input,
+            blockchain,
+            contractName,
+            contractClass,
+            contractInstance,
+            senderAliases,
+        );
     }
 
     async deploy(context: ContractAdapterExecutionContext): Promise<BlockchainTransaction[]> {
@@ -179,7 +193,10 @@ export class TactContractAdapter implements ContractAdapter {
     }
 
     private serializeTypedMessage(message: Record<string, unknown>): Cell {
-        const normalizedMessage = normalizeDecimalStrings(message) as Record<string, unknown>;
+        const normalizedMessage = normalizeProfilerValue(
+            normalizeDecimalStrings(message),
+            this.senderAliases,
+        ) as Record<string, unknown>;
         const typeName = normalizedMessage.$$type;
         if (typeof typeName !== "string") {
             throw new Error(
@@ -207,4 +224,76 @@ export class TactContractAdapter implements ContractAdapter {
     private resolveValue(scenario: GasScenario, defaultValue?: string): bigint {
         return toBigIntValue(scenario.value, toBigIntValue(defaultValue, 0n));
     }
+}
+
+async function createSenderAliases(
+    blockchain: Blockchain,
+    scenarioFile: ResolvedGasProfilerInput["scenarioFile"],
+): Promise<Record<string, Address>> {
+    const aliases: Record<string, Address> = {};
+    const names = new Set<string>(["deployer", "sender", "user"]);
+
+    for (const scenario of scenarioFile.scenarios) {
+        if (scenario.senderName) {
+            names.add(scenario.senderName);
+        }
+    }
+
+    for (const name of Object.keys(scenarioFile.namedSenders ?? {})) {
+        names.add(name);
+    }
+
+    for (const name of names) {
+        aliases[name] = (await blockchain.treasury(name)).address;
+    }
+
+    return aliases;
+}
+
+function normalizeProfilerValue(
+    value: unknown,
+    senderAliases: Record<string, Address>,
+    parentKey?: string,
+): unknown {
+    if (Array.isArray(value)) {
+        return value.map((entry) => normalizeProfilerValue(entry, senderAliases, parentKey));
+    }
+
+    if (typeof value === "string") {
+        if (value in senderAliases) {
+            return senderAliases[value];
+        }
+
+        try {
+            return Address.parse(value);
+        } catch {
+            if (parentKey?.endsWith("payload")) {
+                return value.length === 0 ? Cell.EMPTY.beginParse() : beginCell().storeStringTail(value).endCell().beginParse();
+            }
+            return value;
+        }
+    }
+
+    if (!value || typeof value !== "object") {
+        return value;
+    }
+
+    const record = value as Record<string, unknown>;
+    if (record.kind === "string-cell" && typeof record.value === "string") {
+        return beginCell().storeStringTail(record.value).endCell();
+    }
+
+    if (record.kind === "string-slice" && typeof record.value === "string") {
+        return beginCell().storeStringTail(record.value).endCell().beginParse();
+    }
+
+    if (record.kind === "empty-slice") {
+        return Cell.EMPTY.beginParse();
+    }
+
+    const result: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(record)) {
+        result[key] = normalizeProfilerValue(entry, senderAliases, key);
+    }
+    return result;
 }

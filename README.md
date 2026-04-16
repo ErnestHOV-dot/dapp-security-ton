@@ -1,104 +1,170 @@
 # dapp-security-ton
 
-CLI toolkit for static analysis and gas profiling of TON Tact smart contracts.
+CLI-инструмент для статического анализа и gas profiling Tact-смарт-контрактов в сети TON.
 
-## What It Does
+## Что умеет
 
-The project currently provides two user-facing capabilities:
+Проект поддерживает два режима работы:
 
-- `static analysis` for heuristic security checks on Tact source files
-- `gas profiling` in `@ton/sandbox` driven by explicit JSON scenarios
+- `Статический анализ`
+  Проверяет Tact-контракт по набору эвристических правил и показывает найденные риски.
 
-The gas profiler is scenario-based by design. It does not guess contract behavior automatically; the user defines the calls to execute and the tool produces a structured JSON report plus a short console summary.
+- `Gas profiling`
+  Исполняет контракт в `@ton/sandbox` по JSON-сценариям, считает `gas` и `fees`, сохраняет отчеты в `JSON` и `Markdown`.
 
-## Quick Start
+## Установка
 
 ```bash
 npm install
+```
+
+Если используешь gas profiler и тебе нужны generated wrappers:
+
+```bash
 npm run tact:build
+```
+
+Сборка TypeScript:
+
+```bash
 npm run build
 ```
 
-Run static analysis:
+## Статический анализ
+
+Запуск:
 
 ```bash
-npm run analyze -- ./contracts/GasTestContract.tact
+npm run analyze -- ./contracts/<YourContract>.tact
 ```
 
-Run gas profiling:
+Что делает команда:
+
+- читает `.tact` файл
+- строит AST
+- применяет правила анализа
+- печатает найденные проблемы в консоль
+
+## Gas Profiling
+
+Базовый запуск:
 
 ```bash
 npm run gas:profile -- \
-  --contract ./contracts/GasTestContract.tact \
-  --scenarios ./examples/gas-profile/basic.scenarios.json
+  --contract ./contracts/<YourContract>.tact \
+  --scenarios ./scenarios/<your-scenarios>.json
 ```
 
-Run gas profiling through the main CLI:
+Запуск через общий entrypoint:
 
 ```bash
 npm run analyze -- \
   --gas-profile \
-  --contract ./contracts/GasTestContract.tact \
-  --scenarios ./examples/gas-profile/basic.scenarios.json
+  --contract ./contracts/<YourContract>.tact \
+  --scenarios ./scenarios/<your-scenarios>.json
 ```
 
-## CLI Commands
+Что делает profiler:
 
-| Command | Purpose |
-|---|---|
-| `npm run analyze -- <contract>` | Run static analysis on a Tact file |
-| `npm run gas:profile -- ...` | Run gas profiling scenarios |
-| `npm run tact:build` | Build Tact artifacts and wrappers |
-| `npm run build` | Compile the TypeScript project |
-| `npm run test` | Run tests |
-| `npm run clean` | Remove generated `dist`, `build`, and `reports` directories |
+- валидирует входные параметры
+- находит или использует generated wrapper
+- поднимает `@ton/sandbox`
+- прогоняет сценарии из JSON
+- считает `gas` и `fees`
+- сохраняет JSON и Markdown отчеты
 
-## Gas Profiling Inputs
+## Основные CLI-параметры
 
-Supported CLI flags:
+- `--contract <path>` — путь к `.tact` контракту
+- `--scenarios <path>` — путь к JSON-файлу сценариев
+- `--build <path>` — путь к build-артефактам
+- `--wrapper <path>` — путь к generated wrapper
+- `--output <path>` — путь для сохранения JSON-отчета
+- `--format <json|pretty>` — формат консольного вывода
 
-- `--contract <path>`
-- `--scenarios <path>`
-- `--build <path>`
-- `--wrapper <path>`
-- `--output <path>`
-- `--format <json|pretty>`
-
-Example scenario files:
-
-- [examples/gas-profile/basic.scenarios.json](/Users/e.salakhov/Desktop/static/dapp-security-ton/examples/gas-profile/basic.scenarios.json)
-- [examples/gas-profile/typed.scenarios.json](/Users/e.salakhov/Desktop/static/dapp-security-ton/examples/gas-profile/typed.scenarios.json)
-
-Detailed profiler documentation: [docs/gas-profiler.md](/Users/e.salakhov/Desktop/static/dapp-security-ton/docs/gas-profiler.md)
-
-## Project Layout
+Если `--output` не указан, JSON-отчет сохраняется в:
 
 ```text
-src/
-  index.ts
-  cli.ts
-  linter.ts
-  gas_profiler/
-  rules/
-scripts/
-  run-gas-profiler.ts
-contracts/
-  GasTestContract.tact
-examples/
-  gas-profile/
-docs/
-tests/
+reports/gas-profile-report.json
 ```
 
-## Notes
+Markdown-отчет сохраняется рядом с тем же именем, но с расширением `.md`.
 
-- The default demo contract is `contracts/GasTestContract.tact`.
-- Generated artifacts are written to `build/`.
-- Reports are written to `reports/` unless `--output` is provided.
-- The current profiler version supports `deploy`, `getter`, `receive-empty`, `receive-text`, and wrapper-backed `receive-typed`.
+## Структура входных данных
 
----
+В проекте больше нет демо-примеров. Пользователь должен:
 
-## 📌 Примечание
+- положить контракт в `contracts/`
+- положить сценарии в `scenarios/`
+- при необходимости добавить проект в `tact.config.json`
 
-Если необходимо анализировать другой контракт, достаточно изменить значение `FILENAME` в `src/index.ts` или доработать CLI-передачу пути к файлу в будущем.
+Минимальный пример scenario JSON:
+
+```json
+{
+  "contractName": "MyContract",
+  "defaults": {
+    "value": "10000000",
+    "senderName": "deployer"
+  },
+  "scenarios": [
+    {
+      "name": "deploy",
+      "kind": "deploy"
+    },
+    {
+      "name": "getter call",
+      "kind": "getter",
+      "methodName": "getValue",
+      "args": []
+    }
+  ]
+}
+```
+
+Подробная документация по profiler:
+
+- [docs/gas-profiler.md](/Users/e.salakhov/Desktop/static/dapp-security-ton/docs/gas-profiler.md)
+
+## Формат результатов
+
+`Gas profiler` сохраняет два отчета:
+
+- `JSON` — машиночитаемый отчет
+- `Markdown` — читаемый отчет с findings и таблицей сценариев
+
+## NPM-команды
+
+| Команда | Назначение |
+|---|---|
+| `npm run analyze -- <contract>` | статический анализ контракта |
+| `npm run gas:profile -- ...` | запуск gas profiler |
+| `npm run tact:build` | сборка Tact-артефактов |
+| `npm run build` | сборка TypeScript |
+| `npm run test` | запуск тестов |
+| `npm run clean` | удаление `dist`, `build`, `reports` |
+
+## Ограничения текущей версии
+
+Сейчас profiler поддерживает:
+
+- `deploy`
+- `getter`
+- `receive-empty`
+- `receive-text`
+- `receive-typed` через generated wrapper и `store<MessageType>()`
+
+Profiler не генерирует сценарии автоматически. Пользователь явно задает их в JSON.
+
+## Структура проекта
+
+```text
+contracts/   # пользовательские Tact-контракты
+scenarios/   # пользовательские JSON-сценарии для gas profiling
+docs/        # документация
+scripts/     # CLI entrypoints
+src/         # исходный код анализатора и profiler
+tests/       # тесты
+build/       # generated Tact artifacts
+reports/     # generated profiler reports
+```

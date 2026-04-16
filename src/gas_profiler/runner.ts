@@ -20,7 +20,7 @@ export async function runGasProfiler(options: GasProfilerOptions): Promise<GasPr
             ? await options.createAdapter(options.input, blockchain)
             : await TactContractAdapter.create(options.input, blockchain));
 
-    const senders = await createSenders(blockchain, options.input.scenarioFile.scenarios);
+    const senders = await createSenders(blockchain, options.input.scenarioFile);
     const initialSnapshot = blockchain.snapshot();
     const baselineDeployScenario = buildBaselineDeployScenario(options.input.scenarioFile.scenarios);
     const scenarioResults: GasScenarioResult[] = [];
@@ -129,13 +129,16 @@ function buildScenarioResult(
 
 async function createSenders(
     blockchain: Blockchain,
-    scenarios: GasScenario[],
+    scenarioFile: { scenarios: GasScenario[]; namedSenders?: Record<string, string> },
 ): Promise<Record<string, Awaited<ReturnType<Blockchain["treasury"]>>>> {
     const names = new Set(["deployer", "sender", "user"]);
-    for (const scenario of scenarios) {
+    for (const scenario of scenarioFile.scenarios) {
         if (scenario.senderName) {
             names.add(scenario.senderName);
         }
+    }
+    for (const name of Object.keys(scenarioFile.namedSenders ?? {})) {
+        names.add(name);
     }
 
     const senders: Record<string, Awaited<ReturnType<Blockchain["treasury"]>>> = {};
