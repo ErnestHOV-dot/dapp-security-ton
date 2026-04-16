@@ -13,8 +13,8 @@
 
 ```bash
 npm run gas:profile -- \
-  --contract ./contracts/GasTestContract.tact \
-  --scenarios ./examples/gas-profile/basic.scenarios.json
+  --contract ./contracts/<YourContract>.tact \
+  --scenarios ./scenarios/<your-scenarios>.json
 ```
 
 Через основной CLI:
@@ -22,8 +22,8 @@ npm run gas:profile -- \
 ```bash
 npm run analyze -- \
   --gas-profile \
-  --contract ./contracts/GasTestContract.tact \
-  --scenarios ./examples/gas-profile/basic.scenarios.json
+  --contract ./contracts/<YourContract>.tact \
+  --scenarios ./scenarios/<your-scenarios>.json
 ```
 
 ## Параметры CLI

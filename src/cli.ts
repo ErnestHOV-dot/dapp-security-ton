@@ -51,7 +51,7 @@ export function parseRootCliArgs(argv: string[]): RootCliOptions {
 
 export function printRootHelp(): void {
     console.log("Usage:");
-    console.log("  npm run analyze -- [contract.tact]");
+    console.log("  npm run analyze -- <contract.tact>");
     console.log("  npm run analyze -- --gas-profile --contract <path> --scenarios <path> [options]");
     console.log("  npm run gas:profile -- --contract <path> --scenarios <path> [options]");
     console.log("");

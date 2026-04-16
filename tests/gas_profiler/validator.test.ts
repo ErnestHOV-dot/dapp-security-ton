@@ -36,14 +36,14 @@ test("validateScenarioFile rejects missing text for receive-text", () => {
 test("parseGasProfilerCliArgs parses supported options", () => {
     const parsed = parseGasProfilerCliArgs([
         "--contract",
-        "./contracts/GasTestContract.tact",
+        "./contracts/MyContract.tact",
         "--scenarios",
         "./scenarios.json",
         "--format",
         "json",
     ]);
 
-    assert.equal(parsed.contractPath, "./contracts/GasTestContract.tact");
+    assert.equal(parsed.contractPath, "./contracts/MyContract.tact");
     assert.equal(parsed.scenariosPath, "./scenarios.json");
     assert.equal(parsed.format, "json");
 });

@@ -20,31 +20,11 @@ export async function runLinter(filename: string, rules: Rule[]) {
     console.log(`${CYAN}Читаем файл: ${filename}...${RESET}`);
 
     try {
-        const sourceCode = fs.readFileSync(filename, "utf-8");
-        const astFactory = getAstFactory();
-        const parser = getParser(astFactory);
-
-        const ast = parser.parse({
-            path: filename,
-            code: sourceCode,
-            origin: "user",
-        });
-
-        if (!ast?.items) {
-            throw new Error("Пустой AST.");
-        }
-
         console.log(`${CYAN}Анализ запущен...${RESET}\n`);
+        const result = analyzeContractFile(filename, rules);
 
-        const ctx: AnalysisContext = {
-            sourceCode,
-            ast,
-        };
-
-        const issues = runRules(ctx, rules);
-
-        printContainerSummary(ast);
-        printIssues(issues);
+        printContainerSummary(result.ast);
+        printIssues(result.issues);
 
         console.log(`\n${CYAN}Анализ завершен.${RESET}`);
     } catch (e: any) {
@@ -55,6 +35,32 @@ export async function runLinter(filename: string, rules: Rule[]) {
 
         console.error(`${RED}Ошибка парсинга:${RESET} ${e.message}`);
     }
+}
+
+export function analyzeContractFile(filename: string, rules: Rule[]) {
+    const sourceCode = fs.readFileSync(filename, "utf-8");
+    const astFactory = getAstFactory();
+    const parser = getParser(astFactory);
+
+    const ast = parser.parse({
+        path: filename,
+        code: sourceCode,
+        origin: "user",
+    });
+
+    if (!ast?.items) {
+        throw new Error("Пустой AST.");
+    }
+
+    const ctx: AnalysisContext = {
+        sourceCode,
+        ast,
+    };
+
+    return {
+        ast,
+        issues: runRules(ctx, rules),
+    };
 }
 
 function printContainerSummary(ast: any) {

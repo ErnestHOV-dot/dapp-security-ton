@@ -1,13 +1,8 @@
 {
   "projects": [
     {
-      "name": "gas-test",
-      "path": "./contracts/GasTestContract.tact",
-      "output": "./build"
-    },
-    {
-      "name": "user-demo",
-      "path": "./contracts/UserDemoContract.tact",
+      "name": "test",
+      "path": "./contracts/test.tact",
       "output": "./build"
     }
   ]

@@ -66,6 +66,7 @@ export function serializeReport(report: GasProfileReport): SerializedGasProfileR
         generatedAt: report.generatedAt,
         ...(report.description !== undefined ? { description: report.description } : {}),
         scenarios: report.scenarios.map(serializeScenarioResult),
+        ...(report.staticAnalysis !== undefined ? { staticAnalysis: report.staticAnalysis } : {}),
         overall: report.overall,
     };
 }
