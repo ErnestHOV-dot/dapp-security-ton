@@ -1,3 +1,4 @@
+// Detects TODO/FIXME comments left in source code.
 import type { Issue, Rule } from "../types";
 
 export function createTodoCommentRule(): Rule {

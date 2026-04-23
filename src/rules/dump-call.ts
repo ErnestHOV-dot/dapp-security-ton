@@ -1,3 +1,4 @@
+// Detects leftover dump() debug calls inside executable declarations.
 import type { Issue, Rule } from "../types";
 import {
     formatContractSuffix,

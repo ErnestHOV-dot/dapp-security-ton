@@ -1,3 +1,4 @@
+// Detects internal receivers that do not perform explicit sender/owner access checks.
 import type { Issue, Rule } from "../types";
 import {
     formatContractSuffix,

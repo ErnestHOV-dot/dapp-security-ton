@@ -1,3 +1,4 @@
+// Detects external receivers that appear to lack replay protection checks.
 import type { Issue, Rule } from "../types";
 import {
     containsPattern,

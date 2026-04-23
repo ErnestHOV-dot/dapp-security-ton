@@ -1,3 +1,4 @@
+// Detects send() calls that omit an explicit send mode.
 import type { Issue, Rule } from "../types";
 import {
     formatContractSuffix,

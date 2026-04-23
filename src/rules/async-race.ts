@@ -1,3 +1,4 @@
+// Detects order-dependent self state mutations after fan-out message sends.
 import type { Issue, Rule } from "../types";
 import { collectSelfArithmeticMutations, countStaticCalls, formatContractSuffix, getDeclarationLabel } from "../utils";
 

@@ -1,3 +1,4 @@
+// Detects empty functions, receivers, and init blocks that add dead weight to the contract.
 import type { Issue, Rule } from "../types";
 import { formatContractSuffix, getDeclarationLabel, getDeclarationLine, visitExecutableDeclarations } from "../utils";
 

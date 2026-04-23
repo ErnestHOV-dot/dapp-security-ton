@@ -1,3 +1,4 @@
+// Detects bounce-sensitive send() usage that lacks adequate bounced message handling.
 import type { Issue, Rule } from "../types";
 import { getDeclarationLine, getStatementLine, safeJsonStringify, traverseStatements } from "../utils";
 

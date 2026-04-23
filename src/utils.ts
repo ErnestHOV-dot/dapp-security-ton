@@ -71,10 +71,34 @@ export function traverseStatements(statements: any[], visitor: (statement: any) 
         if (
             statement.kind === "statement_while" ||
             statement.kind === "statement_repeat" ||
-            statement.kind === "statement_until"
+            statement.kind === "statement_until" ||
+            statement.kind === "statement_foreach"
         ) {
             traverseStatements(statement.statements ?? [], visitor);
         }
+    }
+}
+
+export function traverseAst(node: any, visitor: (node: any) => void) {
+    if (node === null || node === undefined) {
+        return;
+    }
+
+    if (Array.isArray(node)) {
+        for (const item of node) {
+            traverseAst(item, visitor);
+        }
+        return;
+    }
+
+    if (typeof node !== "object") {
+        return;
+    }
+
+    visitor(node);
+
+    for (const value of Object.values(node)) {
+        traverseAst(value, visitor);
     }
 }
 

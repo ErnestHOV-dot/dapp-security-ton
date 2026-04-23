@@ -1,3 +1,4 @@
+// Detects loops whose iteration count may be unsafe for gas-bounded execution.
 import type { Issue, Rule } from "../types";
 import {
     formatContractSuffix,
