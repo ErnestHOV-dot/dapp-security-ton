@@ -1,3 +1,4 @@
+// Detects message-coordination patterns that can lead to cross-contract deadlocks.
 import type { Issue, Rule } from "../types";
 import {
     formatContractSuffix,
