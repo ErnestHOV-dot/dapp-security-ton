@@ -11,7 +11,10 @@
     "gas:profile": "ts-node scripts/run-gas-profiler.ts",
     "clean": "node -e \"const fs=require('fs'); for (const p of ['dist','build','reports']) fs.rmSync(p,{recursive:true,force:true});\"",
     "tact:build": "tact --config tact.config.json",
-    "test": "node --test -r ts-node/register tests/*.test.ts tests/**/*.test.ts"
+    "test": "node --test -r ts-node/register tests/*.test.ts tests/**/*.test.ts",
+    "predeploy:testnet": "npm run tact:build",
+    "deploy:testnet": "ts-node scripts/deploy-testnet.ts",
+    "wallet:address": "ts-node scripts/get-wallet-address.ts"
   },
   "keywords": [
     "ton",
@@ -27,7 +30,8 @@
     "@ton/core": "^0.60.1",
     "@ton/crypto": "^3.3.0",
     "@ton/sandbox": "^0.31.0",
-    "@ton/ton": "^13.9.0"
+    "@ton/ton": "^13.9.0",
+    "dotenv": "^17.4.2"
   },
   "devDependencies": {
     "@types/node": "^25.4.0",

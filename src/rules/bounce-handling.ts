@@ -1,6 +1,14 @@
 // Detects bounce-sensitive send() usage that lacks adequate bounced message handling.
 import type { Issue, Rule } from "../types";
-import { getDeclarationLine, getStatementLine, safeJsonStringify, traverseStatements } from "../utils";
+import {
+    astContainsAnyIdentifier,
+    getDeclarationLine,
+    getSendParametersArg,
+    getStatementLine,
+    getStaticCallName,
+    getStructFieldInitializer,
+    traverseStatements,
+} from "../utils";
 
 export function createBounceHandlingRule(): Rule {
     return {
@@ -27,19 +35,19 @@ export function createBounceHandlingRule(): Rule {
                 for (const decl of declarations) {
                     const declarationLine = getDeclarationLine(ctx.sourceCode, decl);
                     traverseStatements(decl.statements ?? [], (statement) => {
-                        if (
-                            statement.kind !== "statement_expression" ||
-                            statement.expression?.kind !== "static_call" ||
-                            statement.expression.function?.text !== "send"
-                        ) {
+                        if (statement.kind !== "statement_expression" || getStaticCallName(statement.expression) !== "send") {
                             return;
                         }
 
-                        const argsJson = safeJsonStringify(statement.expression.args);
+                        const sendParams = getSendParametersArg(statement.expression);
+                        const bounceInitializer = getStructFieldInitializer(sendParams, "bounce");
+                        const toInitializer = getStructFieldInitializer(sendParams, "to");
+                        const modeInitializer = getStructFieldInitializer(sendParams, "mode");
                         const isBounceSensitive =
-                            argsJson.includes("bounce") ||
-                            argsJson.includes("SendIgnoreErrors") ||
-                            argsJson.includes("sender");
+                            (bounceInitializer !== undefined &&
+                                (bounceInitializer.kind !== "boolean" || bounceInitializer.value !== false)) ||
+                            astContainsAnyIdentifier(modeInitializer, ["SendIgnoreErrors"]) ||
+                            astContainsAnyIdentifier(toInitializer, ["sender"]);
 
                         if (isBounceSensitive) {
                             bounceSensitiveSendCount += 1;

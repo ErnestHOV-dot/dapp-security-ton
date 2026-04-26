@@ -85,9 +85,21 @@ function printIssues(issues: Issue[]) {
         return;
     }
 
+    let previousSeverity: Issue["severity"] | undefined;
+
     for (const issue of issues) {
         const line = issue.line ?? "?";
         const color = getSeverityColor(issue.severity);
+
+        if (issue.severity !== previousSeverity) {
+            if (previousSeverity !== undefined) {
+                console.log("");
+            }
+
+            console.log(`${color}${issue.severity}${RESET}`);
+            previousSeverity = issue.severity;
+        }
+
         console.log(`   ${color}[${issue.severity}]${RESET} Line ${line} ${issue.ruleId}: ${issue.title}`);
         console.log(`      ${issue.message}`);
 

@@ -1,11 +1,11 @@
 // Detects random() usage without prior PRG seed preparation on the same execution path.
 import type { Issue, Rule } from "../types";
 import {
+    compactAstStringify,
     formatContractSuffix,
     getDeclarationLabel,
     getDeclarationLine,
     getLineFromLoc,
-    safeJsonStringify,
     traverseAst,
     visitExecutableDeclarations,
 } from "../utils";
@@ -91,7 +91,7 @@ function inspectExpression(
             title: "PRG used without explicit seed preparation",
             message: `В '${ctx.label}'${formatContractSuffix(ctx.contractName)} вызов '${functionName}()' выполняется без предшествующего nativePrepareRandom()/setPRGSeed() по тому же пути.`,
             line: getLineFromLoc(node?.loc) ?? line,
-            evidence: safeJsonStringify(node),
+            evidence: compactAstStringify(node),
             recommendation: "В TON seed генератора случайных чисел основан на seed блока, которым валидатор может управлять. Всегда вызывайте nativePrepareRandom() перед random() и избегайте random() в контрактах с финансовой логикой.",
         });
     });

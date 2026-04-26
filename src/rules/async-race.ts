@@ -1,6 +1,6 @@
 // Detects order-dependent self state mutations after fan-out message sends.
 import type { Issue, Rule } from "../types";
-import { collectSelfArithmeticMutations, countStaticCalls, formatContractSuffix, getDeclarationLabel } from "../utils";
+import { collectSelfArithmeticMutationsFromAst, countStaticCalls, formatContractSuffix, getDeclarationLabel } from "../utils";
 
 export function createAsyncRaceRule(): Rule {
     return {
@@ -9,14 +9,14 @@ export function createAsyncRaceRule(): Rule {
         severity: "HIGH",
         run(ctx) {
             const issues: Issue[] = [];
-            const mutations = collectSelfArithmeticMutations(ctx.sourceCode);
-
-            if (mutations.size === 0) {
-                return issues;
-            }
 
             for (const entry of ctx.ast.items ?? []) {
                 if (entry.kind !== "contract" && entry.kind !== "trait") {
+                    continue;
+                }
+
+                const mutations = collectSelfArithmeticMutationsFromAst(entry);
+                if (mutations.size === 0) {
                     continue;
                 }
 

@@ -1,11 +1,11 @@
 // Detects explicit use of reserved TVM exit codes in throw/nativeThrow/require calls.
 import type { Issue, Rule } from "../types";
 import {
+    compactAstStringify,
     formatContractSuffix,
     getDeclarationLabel,
     getDeclarationLine,
     getLineFromLoc,
-    safeJsonStringify,
     traverseAst,
     traverseStatements,
     visitExecutableDeclarations,
@@ -64,7 +64,7 @@ export function createExitCodeUsageRule(): Rule {
                                 title: "Reserved exit code used for custom failure",
                                 message: `В '${label}'${formatContractSuffix(contractName)} вызов '${functionName}()' использует зарезервированный код ${exitCode}.`,
                                 line: getLineFromLoc(node?.loc) ?? statementLine,
-                                evidence: safeJsonStringify(node),
+                                evidence: compactAstStringify(node),
                                 recommendation: "Коды 0–255 зарезервированы TVM и стандартной библиотекой. Используйте коды начиная с 256 для пользовательских исключений.",
                             });
                         });

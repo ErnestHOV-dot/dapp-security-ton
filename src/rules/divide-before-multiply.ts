@@ -1,11 +1,11 @@
 // Detects integer division results that are multiplied immediately and may lose precision.
 import type { Issue, Rule } from "../types";
 import {
+    compactAstStringify,
     formatContractSuffix,
     getDeclarationLabel,
     getDeclarationLine,
     getLineFromLoc,
-    safeJsonStringify,
     traverseAst,
     traverseStatements,
     visitExecutableDeclarations,
@@ -45,7 +45,7 @@ export function createDivideBeforeMultiplyRule(): Rule {
                                 title: "Division before multiplication loses precision",
                                 message: `В '${label}'${formatContractSuffix(contractName)} найдено выражение, где результат целочисленного деления сразу участвует в умножении.`,
                                 line: getLineFromLoc(node?.loc) ?? statementLine,
-                                evidence: safeJsonStringify(node),
+                                evidence: compactAstStringify(node),
                                 recommendation: "Выполняйте умножение до деления: (a * c) / b для сохранения точности целочисленной арифметики.",
                             });
                         });

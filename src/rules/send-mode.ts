@@ -1,11 +1,16 @@
 // Detects send() calls that omit an explicit send mode.
 import type { Issue, Rule } from "../types";
 import {
+    astContainsAnyIdentifier,
+    compactAstStringify,
     formatContractSuffix,
+    getConstantNumber,
     getDeclarationLabel,
     getDeclarationLine,
+    getSendParametersArg,
     getStatementLine,
-    safeJsonStringify,
+    getStaticCallName,
+    getStructFieldInitializer,
     traverseStatements,
     visitExecutableDeclarations,
 } from "../utils";
@@ -29,15 +34,16 @@ export function createSendModeRule(): Rule {
                     }
 
                     const expression = statement.expression;
-                    if (expression?.kind !== "static_call" || expression.function?.text !== "send") {
+                    if (getStaticCallName(expression) !== "send") {
                         return;
                     }
 
-                    const argsJson = safeJsonStringify(expression.args);
+                    const sendParams = getSendParametersArg(expression);
+                    const modeInitializer = getStructFieldInitializer(sendParams, "mode");
                     const hasMode =
-                        argsJson.includes("mode") ||
-                        argsJson.includes("SendRemainingValue") ||
-                        argsJson.includes("128");
+                        modeInitializer !== undefined ||
+                        astContainsAnyIdentifier(expression.args, ["SendRemainingValue"]) ||
+                        getConstantNumber(modeInitializer) === 128;
 
                     if (!hasMode) {
                         issues.push({
@@ -46,7 +52,7 @@ export function createSendModeRule(): Rule {
                             title: "send() call without explicit mode",
                             message: `Найден вызов 'send()' в '${label}'${formatContractSuffix(contractName)} без явного режима.`,
                             line: getStatementLine(ctx.sourceCode, statement, declarationLine),
-                            evidence: argsJson,
+                            evidence: compactAstStringify(expression.args),
                             recommendation: "Укажите mode, например SendRemainingValue + SendIgnoreErrors, если это соответствует логике.",
                         });
                     }

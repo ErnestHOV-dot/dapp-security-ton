@@ -1,10 +1,11 @@
 // Detects message-coordination patterns that can lead to cross-contract deadlocks.
 import type { Issue, Rule } from "../types";
 import {
+    astContainsIdentifierMatching,
     formatContractSuffix,
     getDeclarationLabel,
     getDeclarationLine,
-    safeJsonStringify,
+    getStaticCallName,
     traverseStatements,
     visitExecutableDeclarations,
 } from "../utils";
@@ -37,16 +38,18 @@ export function createDeadlockRule(): Rule {
 
                     if (
                         statement.kind === "statement_expression" &&
-                        statement.expression?.kind === "static_call" &&
-                        statement.expression.function?.text === "send"
+                        getStaticCallName(statement.expression) === "send"
                     ) {
                         sendCount += 1;
                     }
                 });
 
-                const json = safeJsonStringify(statements).toLowerCase();
                 const hasCoordinationKeywords = ["confirm", "confirmation", "wait", "waiting", "status", "pending"]
-                    .some((keyword) => json.includes(keyword));
+                    .some((keyword) =>
+                        astContainsIdentifierMatching(statements, (identifier) =>
+                            identifier.toLowerCase().includes(keyword),
+                        ),
+                    );
 
                 if (sendCount > 0 && conditionCount > 0 && hasCoordinationKeywords) {
                     const label = getDeclarationLabel(decl);
