@@ -7,16 +7,16 @@ export const BLUE = "\x1b[34m";
 export const RESET = "\x1b[0m";
 
 export function compareIssues(left: Issue, right: Issue): number {
+    const severityDiff = severityRank(right.severity) - severityRank(left.severity);
+    if (severityDiff !== 0) {
+        return severityDiff;
+    }
+
     const leftLine = left.line ?? Number.MAX_SAFE_INTEGER;
     const rightLine = right.line ?? Number.MAX_SAFE_INTEGER;
 
     if (leftLine !== rightLine) {
         return leftLine - rightLine;
-    }
-
-    const severityDiff = severityRank(right.severity) - severityRank(left.severity);
-    if (severityDiff !== 0) {
-        return severityDiff;
     }
 
     return (
@@ -103,10 +103,7 @@ export function traverseAst(node: any, visitor: (node: any) => void) {
 }
 
 export function containsPattern(nodes: any[], patterns: string[]): boolean {
-    return nodes.some((node) => {
-        const json = safeJsonStringify(node);
-        return patterns.some((pattern) => json.includes(pattern));
-    });
+    return astContainsAnyIdentifier(nodes, patterns);
 }
 
 export function countStaticCalls(statements: any[], functionName: string): number {
@@ -125,29 +122,148 @@ export function countStaticCalls(statements: any[], functionName: string): numbe
     return count;
 }
 
-export function collectSelfArithmeticMutations(sourceCode: string): Map<string, FieldMutationSummary> {
+export function getStaticCallName(node: any): string | undefined {
+    return node?.kind === "static_call" ? node.function?.text : undefined;
+}
+
+export function getMethodCallName(node: any): string | undefined {
+    return node?.kind === "method_call" ? node.method?.text : undefined;
+}
+
+export function astContainsStaticCall(node: any, functionNames: string[]): boolean {
+    const names = new Set(functionNames);
+    let found = false;
+
+    traverseAst(node, (current) => {
+        if (names.has(getStaticCallName(current) ?? "")) {
+            found = true;
+        }
+    });
+
+    return found;
+}
+
+export function astContainsAnyIdentifier(node: any, identifiers: string[]): boolean {
+    const names = new Set(identifiers);
+    let found = false;
+
+    traverseAst(node, (current) => {
+        if (current?.kind === "id" && names.has(current.text)) {
+            found = true;
+        }
+    });
+
+    return found;
+}
+
+export function astContainsIdentifierMatching(node: any, predicate: (identifier: string) => boolean): boolean {
+    let found = false;
+
+    traverseAst(node, (current) => {
+        if (current?.kind === "id" && predicate(current.text)) {
+            found = true;
+        }
+    });
+
+    return found;
+}
+
+export function getFieldAccessName(node: any): string | undefined {
+    return node?.kind === "field_access" ? node.field?.text : undefined;
+}
+
+export function getFieldAccessRootName(node: any): string | undefined {
+    if (!node || typeof node !== "object") {
+        return undefined;
+    }
+
+    if (node.kind === "id") {
+        return node.text;
+    }
+
+    if (node.kind === "field_access") {
+        return getFieldAccessRootName(node.aggregate);
+    }
+
+    return undefined;
+}
+
+export function isSelfFieldAccess(node: any, fieldName?: string): boolean {
+    if (node?.kind !== "field_access") {
+        return false;
+    }
+
+    if (getFieldAccessRootName(node) !== "self") {
+        return false;
+    }
+
+    return fieldName === undefined || getFieldAccessName(node) === fieldName;
+}
+
+export function getStructFieldInitializer(structNode: any, fieldName: string): any | undefined {
+    if (structNode?.kind !== "struct_instance") {
+        return undefined;
+    }
+
+    const field = (structNode.args ?? []).find((arg: any) => arg.field?.text === fieldName);
+    return field?.initializer;
+}
+
+export function getSendParametersArg(sendCall: any): any | undefined {
+    if (getStaticCallName(sendCall) !== "send") {
+        return undefined;
+    }
+
+    return (sendCall.args ?? []).find((arg: any) => arg.kind === "struct_instance" && arg.type?.text === "SendParameters");
+}
+
+export function getConstantNumber(node: any): number | undefined {
+    if (node?.kind !== "number") {
+        return undefined;
+    }
+
+    const value = Number(node.value);
+    return Number.isFinite(value) ? value : undefined;
+}
+
+export function collectSelfArithmeticMutationsFromAst(ast: any): Map<string, FieldMutationSummary> {
     const result = new Map<string, FieldMutationSummary>();
-    const lines = sourceCode.split("\n");
 
-    lines.forEach((line, index) => {
-        const compoundMatch = line.match(/self\.(\w+)\s*([+\-*/])=\s*/);
-        const mirroredMatch = line.match(/self\.(\w+)\s*=\s*self\.\1\s*([+\-*/])/);
-        const match = compoundMatch ?? mirroredMatch;
+    traverseAst(ast, (node) => {
+        let field: string | undefined;
+        let operation: string | undefined;
 
-        if (!match) {
+        if (node?.kind === "statement_augmentedassign" && isSelfFieldAccess(node.path)) {
+            field = getFieldAccessName(node.path);
+            operation = typeof node.op === "string" ? node.op.replace("=", "") : undefined;
+        }
+
+        if (node?.kind === "statement_assign" && isSelfFieldAccess(node.path)) {
+            const rhs = node.expression;
+            if (
+                rhs?.kind === "op_binary" &&
+                ["+", "-", "*", "/"].includes(rhs.op) &&
+                ((isSelfFieldAccess(rhs.left, getFieldAccessName(node.path)) && rhs.right !== undefined) ||
+                    (isSelfFieldAccess(rhs.right, getFieldAccessName(node.path)) && rhs.left !== undefined))
+            ) {
+                field = getFieldAccessName(node.path);
+                operation = rhs.op;
+            }
+        }
+
+        if (!field || !operation) {
             return;
         }
 
-        const [, field, operation] = match;
         const existing = result.get(field) ?? {
             operations: new Set<string>(),
-            line: index + 1,
+            line: getLineFromLoc(node?.loc) ?? 1,
             samples: [],
         };
 
         existing.operations.add(operation);
         if (existing.samples.length < 3) {
-            existing.samples.push(line.trim());
+            existing.samples.push(compactAstStringify(node, 120));
         }
         result.set(field, existing);
     });
@@ -187,6 +303,17 @@ export function getDeclarationLabel(decl: any): string {
 export function getLineFromLoc(loc: any): number | undefined {
     if (loc?.interval?.start && typeof loc.interval.start.line === "number") {
         return loc.interval.start.line;
+    }
+
+    if (typeof loc?.interval?.getLineAndColumn === "function") {
+        const position = loc.interval.getLineAndColumn();
+        if (typeof position?.line === "number") {
+            return position.line;
+        }
+
+        if (typeof position?.lineNum === "number") {
+            return position.lineNum;
+        }
     }
 
     if (typeof loc?.line === "number") {
@@ -301,14 +428,24 @@ function findFirstMatchingLine(
     return undefined;
 }
 
-export function safeJsonStringify(obj: any): string {
-    return JSON.stringify(obj, (_key, value) => {
+export function compactAstStringify(obj: any, maxLength = 220): string {
+    const raw = JSON.stringify(obj, (key, value) => {
+        if (key === "id" || key === "loc") {
+            return undefined;
+        }
+
         if (typeof value === "bigint") {
             return value.toString();
         }
 
         return value;
     });
+
+    if (raw.length <= maxLength) {
+        return raw;
+    }
+
+    return `${raw.slice(0, Math.max(0, maxLength - 3))}...`;
 }
 
 export function formatContractSuffix(contractName?: string): string {

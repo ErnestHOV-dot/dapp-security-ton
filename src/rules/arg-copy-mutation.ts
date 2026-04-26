@@ -1,11 +1,11 @@
 // Detects mutations of struct/message parameters that are passed by value in Tact.
 import type { Issue, Rule } from "../types";
 import {
+    compactAstStringify,
     formatContractSuffix,
     getDeclarationLabel,
     getDeclarationLine,
     getLineFromLoc,
-    safeJsonStringify,
     traverseStatements,
     visitExecutableDeclarations,
 } from "../utils";
@@ -74,7 +74,7 @@ export function createArgCopyMutationRule(): Rule {
                         title: "Mutation of copied argument is lost",
                         message: `В '${label}'${formatContractSuffix(contractName)} мутируется поле аргумента '${rootIdentifier}', который передаётся по значению.`,
                         line: getLineFromLoc(statement?.loc) ?? declarationLine,
-                        evidence: safeJsonStringify(statement.path),
+                        evidence: compactAstStringify(statement.path),
                         recommendation: "Tact передаёт структуры по значению. Мутация параметра не изменяет оригинал. Верните изменённую копию явно.",
                     });
                 });

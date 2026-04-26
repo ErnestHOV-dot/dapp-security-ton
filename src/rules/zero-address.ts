@@ -1,11 +1,12 @@
 // Detects zero-address usage in sends and ineffective zero-address validation checks.
 import type { Issue, Rule } from "../types";
 import {
+    astContainsIdentifierMatching,
+    compactAstStringify,
     formatContractSuffix,
     getDeclarationLabel,
     getDeclarationLine,
     getLineFromLoc,
-    safeJsonStringify,
     traverseAst,
     traverseStatements,
     visitExecutableDeclarations,
@@ -21,8 +22,10 @@ function isZeroAddressLiteral(node: any): boolean {
 }
 
 function containsZeroLikeName(node: any): boolean {
-    const json = safeJsonStringify(node).toLowerCase();
-    return json.includes("zero") || json.includes("null") || json.includes("empty");
+    return astContainsIdentifierMatching(node, (identifier) => {
+        const normalized = identifier.toLowerCase();
+        return normalized.includes("zero") || normalized.includes("null") || normalized.includes("empty");
+    });
 }
 
 function containsGuardCall(statements: any[]): boolean {
@@ -75,7 +78,7 @@ export function createZeroAddressRule(): Rule {
                                 title: "send() targets zero-like address",
                                 message: `В '${label}'${formatContractSuffix(contractName)} найден вызов 'send()' с нулевым или подозрительным адресом назначения.`,
                                 line: getLineFromLoc(node?.loc) ?? statementLine,
-                                evidence: safeJsonStringify(toInitializer),
+                                evidence: compactAstStringify(toInitializer),
                                 recommendation: "Отправка на нулевой адрес приводит к безвозвратной потере средств. Добавьте явную проверку получателя перед отправкой.",
                             });
                         }
@@ -105,7 +108,7 @@ export function createZeroAddressRule(): Rule {
                         title: "Zero-address check does not stop execution",
                         message: `В '${label}'${formatContractSuffix(contractName)} проверяется нулевой адрес, но выполнение не прерывается через throw()/require().`,
                         line: getLineFromLoc(statement?.loc) ?? declarationLine,
-                        evidence: safeJsonStringify(condition),
+                        evidence: compactAstStringify(condition),
                         recommendation: "Отправка на нулевой адрес приводит к безвозвратной потере средств. Добавьте явную проверку получателя перед отправкой.",
                     });
                 });

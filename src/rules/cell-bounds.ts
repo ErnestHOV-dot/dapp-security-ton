@@ -1,11 +1,11 @@
 // Detects builder serialization patterns that can exceed TVM cell bit/ref limits.
 import type { Issue, Rule } from "../types";
 import {
+    compactAstStringify,
     formatContractSuffix,
     getDeclarationLabel,
     getDeclarationLine,
     getLineFromLoc,
-    safeJsonStringify,
     traverseAst,
     traverseStatements,
     visitExecutableDeclarations,
@@ -71,7 +71,7 @@ export function createCellBoundsRule(): Rule {
                                         title: "Builder stores more than one cell can hold",
                                         message: `Вызов '${callName}' в '${label}'${formatContractSuffix(contractName)} использует ${bits} бит, что превышает лимит TVM-ячейки.`,
                                         line: getLineFromLoc(node?.loc) ?? statementLine,
-                                        evidence: safeJsonStringify(node),
+                                        evidence: compactAstStringify(node),
                                         recommendation: "Ячейка TVM вмещает не более 1023 бит и 4 ссылок. Разбейте данные на несколько ячеек.",
                                     });
                                 }

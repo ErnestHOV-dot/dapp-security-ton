@@ -1,10 +1,11 @@
 // Detects internal receivers that do not perform explicit sender/owner access checks.
 import type { Issue, Rule } from "../types";
 import {
+    astContainsAnyIdentifier,
+    astContainsStaticCall,
     formatContractSuffix,
     getDeclarationLabel,
     getDeclarationLine,
-    safeJsonStringify,
     visitExecutableDeclarations,
 } from "../utils";
 
@@ -26,12 +27,10 @@ export function createAccessControlRule(): Rule {
                     return;
                 }
 
-                const hasAuthCheck = statements.some((statement: any) => {
-                    const json = safeJsonStringify(statement);
-                    const containsGuard = json.includes("require") || json.includes("nativeThrow");
-                    const containsActor = json.includes("sender") || json.includes("owner");
-                    return containsGuard && containsActor;
-                });
+                const hasAuthCheck = statements.some((statement: any) =>
+                    astContainsStaticCall(statement, ["require", "nativeThrow"]) &&
+                    astContainsAnyIdentifier(statement, ["sender", "owner"]),
+                );
 
                 if (!hasAuthCheck) {
                     const label = getDeclarationLabel(decl);

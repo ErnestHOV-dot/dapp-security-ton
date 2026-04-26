@@ -1,11 +1,11 @@
 // Detects outgoing message sends performed from inside loops.
 import type { Issue, Rule } from "../types";
 import {
+    compactAstStringify,
     formatContractSuffix,
     getDeclarationLabel,
     getDeclarationLine,
     getLineFromLoc,
-    safeJsonStringify,
     traverseAst,
     visitExecutableDeclarations,
 } from "../utils";
@@ -38,7 +38,7 @@ function inspectStatement(
                     title: "Message send inside loop",
                     message: `В '${ctx.label}'${formatContractSuffix(ctx.contractName)} найден вызов '${callLabel}' внутри цикла.`,
                     line: getLineFromLoc(node?.loc) ?? statementLine,
-                    evidence: safeJsonStringify(node),
+                    evidence: compactAstStringify(node),
                     recommendation: "Каждый send() в цикле расходует газ и создаёт исходящее сообщение. При большом числе итераций контракт исчерпает газовый лимит. Рассмотрите batch-подход или ограничьте число итераций.",
                 });
             });

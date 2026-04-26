@@ -1,11 +1,11 @@
 // Detects get-functions that mutate persistent contract state through self.
 import type { Issue, Rule } from "../types";
 import {
+    compactAstStringify,
     formatContractSuffix,
     getDeclarationLabel,
     getDeclarationLine,
     getLineFromLoc,
-    safeJsonStringify,
     traverseStatements,
     visitExecutableDeclarations,
 } from "../utils";
@@ -60,7 +60,7 @@ export function createStateMutationInGetterRule(): Rule {
                         title: "Getter changes persistent state",
                         message: `В get-функции '${label}'${formatContractSuffix(contractName)} найдено изменение состояния контракта через 'self'.`,
                         line: getLineFromLoc(statement?.loc) ?? declarationLine,
-                        evidence: safeJsonStringify(statement.path),
+                        evidence: compactAstStringify(statement.path),
                         recommendation: "Get-функции должны быть чистыми (read-only). Изменение состояния в getter нарушает ожидания вызывающей стороны и может привести к непредвиденному поведению.",
                     });
                 });

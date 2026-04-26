@@ -1,8 +1,13 @@
 {
   "projects": [
     {
-      "name": "test",
-      "path": "./contracts/test.tact",
+      "name": "rule-vulnerable-minis",
+      "path": "./contracts/rule-vulnerable-minis.tact",
+      "output": "./build"
+    },
+    {
+      "name": "rule-safe-minis",
+      "path": "./contracts/rule-safe-minis.tact",
       "output": "./build"
     }
   ]

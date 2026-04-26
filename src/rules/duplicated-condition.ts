@@ -5,9 +5,22 @@ import {
     getDeclarationLabel,
     getDeclarationLine,
     getLineFromLoc,
-    safeJsonStringify,
     visitExecutableDeclarations,
 } from "../utils";
+
+function stableNodeStringify(node: any): string {
+    return JSON.stringify(node, (key, value) => {
+        if (key === "id" || key === "loc") {
+            return undefined;
+        }
+
+        if (typeof value === "bigint") {
+            return value.toString();
+        }
+
+        return value;
+    });
+}
 
 function analyzeScope(
     statements: any[],
@@ -17,7 +30,7 @@ function analyzeScope(
 
     for (const statement of statements ?? []) {
         if (statement.kind === "statement_condition") {
-            const conditionJson = safeJsonStringify(statement.condition);
+            const conditionJson = stableNodeStringify(statement.condition);
 
             if (previousConditionJson !== undefined && previousConditionJson === conditionJson) {
                 ctx.issues.push({
@@ -33,8 +46,8 @@ function analyzeScope(
 
             previousConditionJson = conditionJson;
 
-            const trueJson = safeJsonStringify(statement.trueStatements ?? []);
-            const falseJson = safeJsonStringify(statement.falseStatements ?? []);
+            const trueJson = stableNodeStringify(statement.trueStatements ?? []);
+            const falseJson = stableNodeStringify(statement.falseStatements ?? []);
             if ((statement.falseStatements?.length ?? 0) > 0 && trueJson === falseJson) {
                 ctx.issues.push({
                     ruleId: "duplicated-condition",
